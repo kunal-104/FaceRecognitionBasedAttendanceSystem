@@ -1,0 +1,3133 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Recognition Attendance System</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #f5f7fa;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .video-container {
+            position: relative;
+            width: 640px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        video,
+        canvas {
+            width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .panel {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            margin-top: 0;
+            color: #2c3e50;
+            font-size: 1.2rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin: 5px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .btn-danger {
+            background-color: #e74c3c;
+        }
+
+        .btn-danger:hover {
+            background-color: #c0392b;
+        }
+
+        .btn-success {
+            background-color: #2ecc71;
+        }
+
+        .btn-success:hover {
+            background-color: #27ae60;
+        }
+
+        #status {
+            margin: 10px 0;
+            padding: 12px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        #students-list,
+        #attendance-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 10px;
+            background-color: #f9f9f9;
+        }
+
+        .student-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            background-color: #fff;
+            margin-bottom: 5px;
+            border-radius: 4px;
+        }
+
+        .student-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .student-name {
+            font-weight: bold;
+        }
+
+        .student-roll {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+        }
+
+        .attendance-item {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            background-color: #fff;
+            margin-bottom: 5px;
+            border-radius: 4px;
+        }
+
+        .success {
+            color: #27ae60;
+        }
+
+        .error {
+            color: #e74c3c;
+        }
+
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .form-row {
+            margin-bottom: 10px;
+        }
+
+        .form-row label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .subject-selector {
+            margin: 15px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            background-color: #f5f5f5;
+        }
+
+        .subject-item {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+        }
+
+        .subject-item input[type="radio"] {
+            margin-right: 10px;
+        }
+
+        .subject-controls {
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .subject-controls input {
+            flex: 1;
+            margin-right: 10px;
+        }
+
+        .export-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .export-actions button {
+            flex: 1;
+        }
+
+        .date-filter {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .date-filter input {
+            flex: 1;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>College Face Recognition Attendance System</h1>
+
+    <div class="container">
+        <div class="video-container">
+            <video id="video" autoplay muted></video>
+            <canvas id="overlay" style="display:none;"></canvas>
+        </div>
+
+        <div class="controls">
+            <div class="panel">
+                <h2>System Status</h2>
+                <div id="status">Loading models...</div>
+                <button id="startCamera" disabled>Start Camera</button>
+                <button id="exportData" disabled class="btn-success">Export All Data</button>
+            </div>
+
+            <div class="panel">
+                <h2>Register New Student</h2>
+                <div class="form-row">
+                    <label for="studentName">Student Name:</label>
+                    <input type="text" id="studentName" placeholder="Enter student's full name">
+                </div>
+                <div class="form-row">
+                    <label for="rollNumber">Roll Number:</label>
+                    <input type="text" id="rollNumber" placeholder="Enter student's roll number">
+                </div>
+                <button id="captureBtn" disabled>Capture Face</button>
+                <h3>Registered Students</h3>
+                <div id="students-list">
+                    <p>No students registered yet</p>
+                </div>
+                <button id="clearRegistrations" class="btn-danger">Clear All Registrations</button>
+            </div>
+
+            <div class="panel">
+                <h2>Attendance Management</h2>
+
+                <div class="subject-selector">
+                    <h3>Select Subject</h3>
+                    <div id="subjects-list">
+                        <p>No subjects available. Add one below.</p>
+                    </div>
+                    <div class="subject-controls">
+                        <input type="text" id="newSubject" placeholder="Add new subject (e.g., Data Structures)">
+                        <button id="addSubject" class="btn-success">Add</button>
+                    </div>
+                </div>
+
+                <button id="startAttendance" disabled>Start Attendance Mode</button>
+                <button id="stopAttendance" disabled>Stop Attendance Mode</button>
+
+                <h3>Attendance Records</h3>
+                <div class="date-filter">
+                    <input type="date" id="attendanceDate" value="">
+                    <button id="filterBtn">Filter</button>
+                </div>
+                <div id="attendance-list">
+                    <p>No attendance records yet</p>
+                </div>
+                <div class="export-actions">
+                    <button id="downloadAttendance" disabled>Download Today's Attendance</button>
+                    <button id="clearTodayAttendance" class="btn-danger">Clear Today's Attendance Data</button>
+                    <button id="clearAttendance" class="btn-danger">Clear All Attendance Data</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+
+    <script>
+        // API URL - Update this with your server address
+        const API_URL = 'http://localhost:3000/api';
+
+        // DOM Elements
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('overlay');
+        const startCameraBtn = document.getElementById('startCamera');
+        const captureBtn = document.getElementById('captureBtn');
+        const studentNameInput = document.getElementById('studentName');
+        const rollNumberInput = document.getElementById('rollNumber');
+        const studentsList = document.getElementById('students-list');
+        const attendanceList = document.getElementById('attendance-list');
+        const startAttendanceBtn = document.getElementById('startAttendance');
+        const stopAttendanceBtn = document.getElementById('stopAttendance');
+        const downloadAttendanceBtn = document.getElementById('downloadAttendance');
+        const clearRegistrationsBtn = document.getElementById('clearRegistrations');
+        const clearAttendanceBtn = document.getElementById('clearAttendance');
+        const clearTodayAttendanceBtn = document.getElementById('clearTodayAttendance');
+        const exportDataBtn = document.getElementById('exportData');
+        const statusText = document.getElementById('status');
+        const newSubjectInput = document.getElementById('newSubject');
+        const addSubjectBtn = document.getElementById('addSubject');
+        const subjectsList = document.getElementById('subjects-list');
+        const attendanceDateInput = document.getElementById('attendanceDate');
+        const filterBtn = document.getElementById('filterBtn');
+
+        // Variables
+        const MODEL_URL = './models';
+        let isCameraStarted = false;
+        let stream = null;
+        let isAttendanceMode = false;
+        let labeledDescriptors = [];
+        let faceMatcher = null;
+        let detectionInterval = null;
+        let attendanceRecords = [];
+        let subjects = [];
+        let currentSubject = '';
+
+        // Initialize face-api.js
+        async function initFaceApi() {
+            try {
+                updateStatus('Loading face recognition models...', 'normal');
+
+                // Load required models for face detection and recognition
+                await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
+                await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+                await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+
+                updateStatus('Models loaded successfully!', 'success');
+                startCameraBtn.disabled = false;
+
+                // Set today's date as default for date filter
+                const today = new Date().toISOString().split('T')[0];
+                attendanceDateInput.value = today;
+
+                // Load data from backend
+                await loadDataFromBackend();
+            } catch (error) {
+                updateStatus(`Error loading models: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        // Update status with appropriate styling
+        function updateStatus(message, type = 'normal') {
+            statusText.textContent = message;
+            statusText.className = type;
+        }
+
+        // Start webcam
+        // async function startCamera() {
+        //     try {
+        //         updateStatus('Accessing camera...', 'normal');
+        //         const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
+        //         video.srcObject = stream;
+
+        //         video.onplay = () => {
+        //             canvas.style.display = 'block';
+        //             const displaySize = { 
+        //                 width: video.videoWidth || video.width || 640, 
+        //                 height: video.videoHeight || video.height || 480 
+        //             };
+        //             faceapi.matchDimensions(canvas, displaySize);
+
+        //             updateStatus('Camera started successfully!', 'success');
+        //             captureBtn.disabled = false;
+        //             startAttendanceBtn.disabled = labeledDescriptors.length === 0;
+        //             isCameraStarted = true;
+        //             startCameraBtn.disabled = true;
+        //         };
+        //     } catch (error) {
+        //         updateStatus(`Error accessing camera: ${error.message}`, 'error');
+        //         console.error(error);
+        //     }
+        // }
+
+
+        async function startCamera() {
+            try {
+                updateStatus('Accessing camera...', 'normal');
+                stream = await navigator.mediaDevices.getUserMedia({ video: {} });
+                video.srcObject = stream;
+
+                video.onplay = () => {
+                    canvas.style.display = 'block';
+                    const displaySize = {
+                        width: video.videoWidth || video.width || 640,
+                        height: video.videoHeight || video.height || 480
+                    };
+                    faceapi.matchDimensions(canvas, displaySize);
+
+                    updateStatus('Camera started successfully!', 'success');
+                    captureBtn.disabled = false;
+                    startAttendanceBtn.disabled = labeledDescriptors.length === 0;
+                    isCameraStarted = true;
+                    startCameraBtn.textContent = 'Stop Camera';
+                };
+            } catch (error) {
+                updateStatus(`Error accessing camera: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        function stopCamera() {
+            if (stream) {
+                const tracks = stream.getTracks();
+                tracks.forEach(track => track.stop());
+                video.srcObject = null;
+                canvas.style.display = 'none';
+                updateStatus('Camera stopped.', 'normal');
+                captureBtn.disabled = true;
+                startAttendanceBtn.disabled = true;
+                isCameraStarted = false;
+                startCameraBtn.textContent = 'Start Camera';
+            }
+        }
+
+        // Load data from backend API
+        async function loadDataFromBackend() {
+            try {
+                updateStatus('Loading data from server...', 'normal');
+
+                // Load students data
+                const studentsResponse = await fetch(`${API_URL}/students`);
+                const studentsData = await studentsResponse.json();
+
+                if (studentsData.length > 0) {
+                    processStudentsData(studentsData);
+                }
+
+                // Load subjects
+                const subjectsResponse = await fetch(`${API_URL}/subjects`);
+                const subjectsData = await subjectsResponse.json();
+
+                if (subjectsData.length > 0) {
+                    subjects = subjectsData.map(item => item.subject);
+                    currentSubject = subjects[0] || '';
+                }
+
+                updateSubjectsList();
+                updateStatus('Data loaded successfully!', 'success');
+                exportDataBtn.disabled = false;
+
+                if (subjects.length > 0 && currentSubject) {
+                    // Load attendance for current subject and today's date
+                    await loadAttendanceData();
+                }
+            } catch (error) {
+                updateStatus(`Error loading data: ${error.message}`, 'error');
+                console.error('Error in loadDataFromBackend:', error);
+            }
+        }
+
+        // Load attendance data for the selected date and subject
+        async function loadAttendanceData() {
+            try {
+                if (!currentSubject) return;
+
+                const date = attendanceDateInput.value;
+                if (!date) return;
+
+                const response = await fetch(`${API_URL}/attendance/${currentSubject}/${date}`);
+                const data = await response.json();
+
+                attendanceRecords = data;
+                updateAttendanceList();
+
+                if (attendanceRecords.length > 0) {
+                    downloadAttendanceBtn.disabled = false;
+                } else {
+                    downloadAttendanceBtn.disabled = subjects.length === 0;
+                }
+            } catch (error) {
+                console.error('Error loading attendance data:', error);
+            }
+        }
+
+        // Process students data 
+        function processStudentsData(studentsData) {
+            labeledDescriptors = [];
+
+            studentsData.forEach(student => {
+                if (student.name && student.roll && student.descriptors) {
+                    try {
+                        // Convert descriptor string back to Float32Array
+                        const descriptorValues = JSON.parse(student.descriptors);
+                        const descriptor = new Float32Array(descriptorValues);
+
+                        labeledDescriptors.push(
+                            new faceapi.LabeledFaceDescriptors(`${student.name}|${student.roll}`, [descriptor])
+                        );
+                    } catch (error) {
+                        console.error(`Error processing student data for ${student.name}:`, error);
+                    }
+                }
+            });
+
+            if (labeledDescriptors.length > 0) {
+                faceMatcher = new faceapi.FaceMatcher(labeledDescriptors);
+                startAttendanceBtn.disabled = !isCameraStarted || subjects.length === 0;
+                downloadAttendanceBtn.disabled = subjects.length === 0;
+            }
+
+            updateStudentsList();
+        }
+
+        // Capture a face for registration
+        async function captureFace() {
+            if (!isCameraStarted) {
+                updateStatus('Please start the camera first', 'error');
+                return;
+            }
+
+            const name = studentNameInput.value.trim();
+            const roll = rollNumberInput.value.trim();
+
+            if (!name) {
+                updateStatus('Please enter a student name', 'error');
+                return;
+            }
+
+            if (!roll) {
+                updateStatus('Please enter a roll number', 'error');
+                return;
+            }
+
+            try {
+                updateStatus('Capturing face, please look at the camera...', 'normal');
+
+                // Detect all faces in the current frame
+                const detections = await faceapi
+                    .detectAllFaces(video, new faceapi.SsdMobilenetv1Options())
+                    .withFaceLandmarks()
+                    .withFaceDescriptors();
+
+                if (detections.length === 0) {
+                    updateStatus('No face detected. Please make sure your face is clearly visible', 'error');
+                    return;
+                }
+
+                if (detections.length > 1) {
+                    updateStatus('Multiple faces detected. Please ensure only one face is visible', 'error');
+                    return;
+                }
+
+                const descriptor = detections[0].descriptor;
+
+                // Check if student is already registered
+                // const existingStudent = labeledDescriptors.find(item =>
+                //     item.label.includes(`|${roll}`)
+                // );
+
+                // if (existingStudent) {
+                //     updateStatus(`A student with roll number ${roll} is already registered`, 'error');
+                //     return;
+                // }
+
+
+                // Check if roll number is already registered
+                const rollExists = labeledDescriptors.find(item =>
+                    item.label.includes(`|${roll}`)
+                );
+                if (rollExists) {
+                    updateStatus(`A student with roll number ${roll} is already registered`, 'error');
+                    return;
+                }
+
+                // Check if face is already registered (even with different roll number)
+                if (faceMatcher) {
+                    const faceMatch = faceMatcher.findBestMatch(descriptor);
+                    if (faceMatch && faceMatch.label !== 'unknown') {
+                        updateStatus(`This face is already registered as ${faceMatch.label}`, 'error');
+                        return;
+                    }
+                }
+
+
+                // Save to API
+                const response = await fetch(`${API_URL}/students`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name,
+                        roll,
+                        descriptors: Array.from(descriptor)
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Server error: ${errorText}`);
+                }
+
+                // Add to local data
+                labeledDescriptors.push(
+                    new faceapi.LabeledFaceDescriptors(`${name}|${roll}`, [descriptor])
+                );
+
+                // Update face matcher
+                faceMatcher = new faceapi.FaceMatcher(labeledDescriptors);
+
+                updateStatus(`Student ${name} (${roll}) registered successfully!`, 'success');
+                studentNameInput.value = '';
+                rollNumberInput.value = '';
+
+                // Update the UI
+                updateStudentsList();
+                startAttendanceBtn.disabled = !isCameraStarted || subjects.length === 0;
+            } catch (error) {
+                updateStatus(`Error during face capture: ${error.message}`, 'error');
+                console.error('Face capture error:', error);
+            }
+        }
+
+        // Start attendance mode
+        function startAttendanceMode() {
+            if (!isCameraStarted) {
+                updateStatus('Please start the camera first', 'error');
+                return;
+            }
+
+            if (!currentSubject) {
+                updateStatus('Please select or add a subject first', 'error');
+                return;
+            }
+
+            if (labeledDescriptors.length === 0) {
+                updateStatus('No students registered. Please register students first', 'error');
+                return;
+            }
+
+            isAttendanceMode = true;
+            updateStatus(`Attendance mode started for ${currentSubject}`, 'success');
+
+            startAttendanceBtn.disabled = true;
+            stopAttendanceBtn.disabled = false;
+            captureBtn.disabled = true;
+
+            // Set up detection interval
+            detectionInterval = setInterval(async () => {
+                if (!isAttendanceMode) return;
+
+                try {
+                    const detections = await faceapi
+                        .detectAllFaces(video, new faceapi.SsdMobilenetv1Options())
+                        .withFaceLandmarks()
+                        .withFaceDescriptors();
+
+                    const displaySize = {
+                        width: video.videoWidth,
+                        height: video.videoHeight
+                    };
+
+                    // Clear previous drawings
+                    const context = canvas.getContext('2d');
+                    context.clearRect(0, 0, canvas.width, canvas.height);
+
+                    // Resize detections to match display size
+                    const resizedDetections = faceapi.resizeResults(detections, displaySize);
+
+                    // Draw detection results on canvas
+                    resizedDetections.forEach(detection => {
+                        const box = detection.detection.box;
+                        const drawBox = new faceapi.draw.DrawBox(box, { label: 'Scanning...' });
+                        drawBox.draw(canvas);
+
+                        // Match detected face with registered faces
+                        if (faceMatcher) {
+                            const match = faceMatcher.findBestMatch(detection.descriptor);
+
+                            if (match && match.label !== 'unknown') {
+                                // Extract student info from label
+                                const [name, roll] = match.label.split('|');
+
+                                // Check if this student is already marked present today
+                                const today = new Date().toISOString().split('T')[0];
+                                const isAlreadyPresent = attendanceRecords.some(record =>
+                                    record.roll === roll &&
+                                    record.date === today &&
+                                    record.subject === currentSubject
+                                );
+
+                                if (!isAlreadyPresent) {
+                                    // Mark attendance
+                                    markAttendance(name, roll);
+
+                                    // Draw green box for recognized face
+                                    const drawBox = new faceapi.draw.DrawBox(box, {
+                                        label: `${name} (${roll}) - Marked Present!`,
+                                        boxColor: 'lime'
+                                    });
+                                    drawBox.draw(canvas);
+                                } else {
+                                    // Draw blue box for already marked students
+                                    const drawBox = new faceapi.draw.DrawBox(box, {
+                                        label: `${name} (${roll}) - Already Present`,
+                                        boxColor: 'blue'
+                                    });
+                                    drawBox.draw(canvas);
+                                }
+                            } else {
+                                // Draw red box for unknown faces
+                                const drawBox = new faceapi.draw.DrawBox(box, {
+                                    label: 'Unknown Person',
+                                    boxColor: 'red'
+                                });
+                                drawBox.draw(canvas);
+                            }
+                        }
+                    });
+                } catch (error) {
+                    console.error('Error during attendance detection:', error);
+                }
+            }, 1000);
+        }
+
+        // Stop attendance mode
+        function stopAttendanceMode() {
+            isAttendanceMode = false;
+            clearInterval(detectionInterval);
+
+            const context = canvas.getContext('2d');
+            context.clearRect(0, 0, canvas.width, canvas.height);
+
+            updateStatus('Attendance mode stopped', 'normal');
+            startAttendanceBtn.disabled = false;
+            stopAttendanceBtn.disabled = true;
+            captureBtn.disabled = false;
+        }
+
+        // Mark attendance
+        async function markAttendance(name, roll) {
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const time = new Date().toLocaleTimeString();
+
+                const attendanceData = {
+                    name,
+                    roll,
+                    subject: currentSubject,
+                    date: today,
+                    time
+                };
+
+                // Save to API
+                const response = await fetch(`${API_URL}/attendance`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(attendanceData)
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Server error: ${errorText}`);
+                }
+
+                // Add to local data
+                attendanceRecords.push(attendanceData);
+
+                // Update UI
+                updateAttendanceList();
+                downloadAttendanceBtn.disabled = false;
+
+                updateStatus(`Attendance marked for ${name} (${roll})`, 'success');
+            } catch (error) {
+                updateStatus(`Error marking attendance: ${error.message}`, 'error');
+                console.error('Attendance marking error:', error);
+            }
+        }
+
+        // Update students list in UI
+        function updateStudentsList() {
+            if (labeledDescriptors.length === 0) {
+                studentsList.innerHTML = '<p>No students registered yet</p>';
+                return;
+            }
+
+            studentsList.innerHTML = '';
+
+            labeledDescriptors.forEach(descriptor => {
+                const [name, roll] = descriptor.label.split('|');
+
+                const studentItem = document.createElement('div');
+                studentItem.className = 'student-item';
+
+                const studentInfo = document.createElement('div');
+                studentInfo.className = 'student-info';
+
+                const nameElement = document.createElement('span');
+                nameElement.className = 'student-name';
+                nameElement.textContent = name;
+
+                const rollElement = document.createElement('span');
+                rollElement.className = 'student-roll';
+                rollElement.textContent = `Roll: ${roll}`;
+
+                studentInfo.appendChild(nameElement);
+                studentInfo.appendChild(rollElement);
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn-danger';
+                deleteBtn.textContent = 'Remove';
+                deleteBtn.onclick = () => removeStudent(roll);
+
+                studentItem.appendChild(studentInfo);
+                studentItem.appendChild(deleteBtn);
+
+                studentsList.appendChild(studentItem);
+            });
+        }
+
+        // Update attendance list in UI
+        function updateAttendanceList() {
+            if (attendanceRecords.length === 0) {
+                attendanceList.innerHTML = '<p>No attendance records yet</p>';
+                return;
+            }
+
+            // Filter records for current subject and selected date
+            const date = attendanceDateInput.value;
+            const filteredRecords = attendanceRecords.filter(record =>
+                record.subject === currentSubject &&
+                record.date === date
+            );
+
+            if (filteredRecords.length === 0) {
+                attendanceList.innerHTML = '<p>No attendance records for this date</p>';
+                return;
+            }
+
+            attendanceList.innerHTML = '';
+
+            // Sort by time
+            filteredRecords.sort((a, b) => new Date(a.time) - new Date(b.time))
+                .forEach(record => {
+                    const attendanceItem = document.createElement('div');
+                    attendanceItem.className = 'attendance-item';
+                    attendanceItem.innerHTML = `
+                        <strong>${record.name}</strong> (${record.roll}) - 
+                        ${record.time} - ${record.subject}
+                    `;
+
+                    attendanceList.appendChild(attendanceItem);
+                });
+        }
+
+        // Remove a student
+        async function removeStudent(roll) {
+            try {
+                // Remove from API
+                const response = await fetch(`${API_URL}/students/${roll}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Server error: ${errorText}`);
+                }
+
+                // Remove from local data
+                const index = labeledDescriptors.findIndex(item => item.label.includes(`|${roll}`));
+                if (index !== -1) {
+                    labeledDescriptors.splice(index, 1);
+
+                    // Update face matcher
+                    if (labeledDescriptors.length > 0) {
+                        faceMatcher = new faceapi.FaceMatcher(labeledDescriptors);
+                    } else {
+                        faceMatcher = null;
+                    }
+                }
+
+                updateStatus(`Student with roll ${roll} removed successfully`, 'success');
+                updateStudentsList();
+
+                // Disable attendance button if no students
+                startAttendanceBtn.disabled = labeledDescriptors.length === 0 || !isCameraStarted || subjects.length === 0;
+            } catch (error) {
+                updateStatus(`Error removing student: ${error.message}`, 'error');
+                console.error('Student removal error:', error);
+            }
+        }
+
+        // Add a new subject
+        async function addSubject() {
+            const subject = newSubjectInput.value.trim();
+
+            if (!subject) {
+                updateStatus('Please enter a subject name', 'error');
+                return;
+            }
+
+            if (subjects.includes(subject)) {
+                updateStatus('This subject already exists', 'error');
+                return;
+            }
+
+            try {
+                // Add to API
+                const response = await fetch(`${API_URL}/subjects`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ subject })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Server error: ${errorText}`);
+                }
+
+                // Add to local data
+                subjects.push(subject);
+
+                if (!currentSubject) {
+                    currentSubject = subject;
+                }
+
+                newSubjectInput.value = '';
+                updateStatus(`Subject ${subject} added successfully`, 'success');
+                updateSubjectsList();
+
+                // Enable attendance button if there are students
+                startAttendanceBtn.disabled = labeledDescriptors.length === 0 || !isCameraStarted;
+                downloadAttendanceBtn.disabled = false;
+            } catch (error) {
+                updateStatus(`Error adding subject: ${error.message}`, 'error');
+                console.error('Subject adding error:', error);
+            }
+        }
+
+        // Update subjects list in UI
+        function updateSubjectsList() {
+            if (subjects.length === 0) {
+                subjectsList.innerHTML = '<p>No subjects available. Add one below.</p>';
+                return;
+            }
+
+            subjectsList.innerHTML = '';
+
+            subjects.forEach(subject => {
+                const subjectItem = document.createElement('div');
+                subjectItem.className = 'subject-item';
+
+                const radio = document.createElement('input');
+                radio.type = 'radio';
+                radio.name = 'subject';
+                radio.value = subject;
+                radio.id = `subject-${subject}`;
+                radio.checked = subject === currentSubject;
+                radio.onchange = () => {
+                    currentSubject = subject;
+                    loadAttendanceData();
+                };
+
+                const label = document.createElement('label');
+                label.htmlFor = `subject-${subject}`;
+                label.textContent = subject;
+
+                subjectItem.appendChild(radio);
+                subjectItem.appendChild(label);
+
+                subjectsList.appendChild(subjectItem);
+            });
+        }
+
+        // Clear all registrations
+        async function clearAllRegistrations() {
+            if (!confirm('Are you sure you want to delete all student registrations? This cannot be undone.')) {
+                return;
+            }
+
+            try {
+                // Clear from API
+                const response = await fetch(`${API_URL}/students`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Server error: ${errorText}`);
+                }
+
+                // Clear local data
+                labeledDescriptors = [];
+                faceMatcher = null;
+
+                updateStatus('All student registrations cleared successfully', 'success');
+                updateStudentsList();
+
+                // Disable attendance button
+                startAttendanceBtn.disabled = true;
+            } catch (error) {
+                updateStatus(`Error clearing registrations: ${error.message}`, 'error');
+                console.error('Registration clearing error:', error);
+            }
+        }
+
+        // Clear attendance data
+        async function clearAttendanceData() {
+            if (!confirm('Are you sure you want to delete all attendance records? This cannot be undone.')) {
+                return;
+            }
+
+            try {
+                // Clear from API
+                const response = await fetch(`${API_URL}/attendance`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Server error: ${errorText}`);
+                }
+
+                // Clear local data
+                attendanceRecords = [];
+
+                updateStatus('All attendance records cleared successfully', 'success');
+                updateAttendanceList();
+
+                // Disable download button
+                downloadAttendanceBtn.disabled = true;
+            } catch (error) {
+                updateStatus(`Error clearing attendance data: ${error.message}`, 'error');
+                console.error('Attendance clearing error:', error);
+            }
+        }
+
+
+
+        // Clear today's attendance data for a selected subject
+        async function clearTodayAttendanceData() {
+            const subjectName = currentSubject;
+            if (!confirm(`Are you sure you want to delete today's attendance for "${subjectName}"? This cannot be undone.`)) {
+                return;
+            }
+
+            try {
+                const today = new Date().toISOString().split('T')[0]; // yyyy-mm-dd
+
+                const response = await fetch(`${API_URL}/attendance/today`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date: today, subject: subjectName })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Server error: ${errorText}`);
+                }
+
+                // Update UI
+                attendanceRecords = attendanceRecords.filter(record => {
+                    return !(record.subject === subjectName && record.date === today);
+                });
+
+                updateStatus(`Today's attendance for "${subjectName}" cleared successfully.`, 'success');
+                updateAttendanceList();
+                downloadAttendanceBtn.disabled = true;
+
+            } catch (error) {
+                updateStatus(`Error clearing today's attendance: ${error.message}`, 'error');
+                console.error('Today attendance clearing error:', error);
+            }
+        }
+
+
+
+        // Download attendance as CSV
+        function downloadAttendanceCSV() {
+            if (attendanceRecords.length === 0) {
+                updateStatus('No attendance records to download', 'error');
+                return;
+            }
+
+            try {
+                const date = attendanceDateInput.value;
+                const subject = currentSubject;
+
+                // Filter records
+                const filteredRecords = attendanceRecords.filter(record =>
+                    record.subject === subject &&
+                    record.date === date
+                );
+
+                if (filteredRecords.length === 0) {
+                    updateStatus('No attendance records for selected date', 'error');
+                    return;
+                }
+
+                // Prepare CSV content
+                let csvContent = 'Roll Number,Name,Subject,Date,Time\n';
+
+                filteredRecords.forEach(record => {
+                    csvContent += `${record.roll},"${record.name}","${record.subject}",${record.date},${record.time}\n`;
+                });
+
+                // Create download link
+                const blob = new Blob([csvContent], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Attendance_${subject}_${date}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+
+                updateStatus(`Attendance report downloaded for ${subject} on ${date}`, 'success');
+            } catch (error) {
+                updateStatus(`Error downloading attendance: ${error.message}`, 'error');
+                console.error('Download error:', error);
+            }
+        }
+
+        // Export all data as JSON
+
+
+        function exportAllData() {
+            try {
+                // Trigger file download from export API
+                fetch(`${API_URL}/export`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to export data');
+                        }
+                        return response.blob();
+                    })
+                    .then(blob => {
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `attendance_system_data_${new Date().toISOString().split('T')[0]}.zip`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        window.URL.revokeObjectURL(url);
+
+                        updateStatus('All data exported successfully', 'success');
+                    })
+                    .catch(error => {
+                        updateStatus(`Error exporting data: ${error.message}`, 'error');
+                        console.error('Export error:', error);
+                    });
+            } catch (error) {
+                updateStatus(`Error exporting data: ${error.message}`, 'error');
+                console.error('Export error:', error);
+            }
+        }
+
+
+
+        // function exportAllData() {
+        //     if (labeledDescriptors.length === 0 && subjects.length === 0 && attendanceRecords.length === 0) {
+        //         updateStatus('No data to export', 'error');
+        //         return;
+        //     }
+
+        //     try {
+        //         // Fetch all data from API
+        //         Promise.all([
+        //             fetch(`${API_URL}/students`).then(res => res.json()),
+        //             fetch(`${API_URL}/subjects`).then(res => res.json()),
+        //             fetch(`${API_URL}/attendance`).then(res => res.json())
+        //         ]).then(([students, subjects, attendance]) => {
+        //             const exportData = {
+        //                 students,
+        //                 subjects,
+        //                 attendance,
+        //                 exportDate: new Date().toISOString()
+        //             };
+
+        //             // Create download link
+        //             const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        //             const url = URL.createObjectURL(blob);
+        //             const a = document.createElement('a');
+        //             a.href = url;
+        //             a.download = `Attendance_System_Export_${new Date().toISOString().split('T')[0]}.json`;
+        //             document.body.appendChild(a);
+        //             a.click();
+        //             document.body.removeChild(a);
+
+        //             updateStatus('All data exported successfully', 'success');
+        //         });
+        //     } catch (error) {
+        //         updateStatus(`Error exporting data: ${error.message}`, 'error');
+        //         console.error('Export error:', error);
+        //     }
+        // }
+
+        // Event listeners
+        // Toggle handler
+        startCameraBtn.addEventListener('click', () => {
+            if (isCameraStarted) {
+                stopCamera();
+            } else {
+                startCamera();
+            }
+        });
+        captureBtn.addEventListener('click', captureFace);
+        startAttendanceBtn.addEventListener('click', startAttendanceMode);
+        stopAttendanceBtn.addEventListener('click', stopAttendanceMode);
+        downloadAttendanceBtn.addEventListener('click', downloadAttendanceCSV);
+        clearRegistrationsBtn.addEventListener('click', clearAllRegistrations);
+        clearAttendanceBtn.addEventListener('click', clearAttendanceData);
+        clearTodayAttendanceBtn.addEventListener('click', clearTodayAttendanceData);
+        exportDataBtn.addEventListener('click', exportAllData);
+        addSubjectBtn.addEventListener('click', addSubject);
+        filterBtn.addEventListener('click', loadAttendanceData);
+
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', initFaceApi);
+    </script>
+</body>
+
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Recognition Attendance System</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #f5f7fa;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .video-container {
+            position: relative;
+            width: 640px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        video, canvas {
+            width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .panel {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            margin-top: 0;
+            color: #2c3e50;
+            font-size: 1.2rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin: 5px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .btn-danger {
+            background-color: #e74c3c;
+        }
+
+        .btn-danger:hover {
+            background-color: #c0392b;
+        }
+
+        .btn-success {
+            background-color: #2ecc71;
+        }
+
+        .btn-success:hover {
+            background-color: #27ae60;
+        }
+
+        #status {
+            margin: 10px 0;
+            padding: 12px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        #students-list, #attendance-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 10px;
+            background-color: #f9f9f9;
+        }
+
+        .student-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            background-color: #fff;
+            margin-bottom: 5px;
+            border-radius: 4px;
+        }
+
+        .student-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .student-name {
+            font-weight: bold;
+        }
+
+        .student-roll {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+        }
+
+        .attendance-item {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            background-color: #fff;
+            margin-bottom: 5px;
+            border-radius: 4px;
+        }
+        
+        .success {
+            color: #27ae60;
+        }
+        
+        .error {
+            color: #e74c3c;
+        }
+        
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        
+        .form-row {
+            margin-bottom: 10px;
+        }
+        
+        .form-row label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+        }
+        
+        .subject-selector {
+            margin: 15px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            background-color: #f5f5f5;
+        }
+        
+        .subject-item {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+        }
+        
+        .subject-item input[type="radio"] {
+            margin-right: 10px;
+        }
+        
+        .subject-controls {
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+        }
+        
+        .subject-controls input {
+            flex: 1;
+            margin-right: 10px;
+        }
+        
+        .export-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .export-actions button {
+            flex: 1;
+        }
+        
+        .date-filter {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .date-filter input {
+            flex: 1;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>College Face Recognition Attendance System</h1>
+    
+    <div class="container">
+        <div class="video-container">
+            <video id="video" autoplay muted></video>
+            <canvas id="overlay" style="display:none;"></canvas>
+        </div>
+        
+        <div class="controls">
+            <div class="panel">
+                <h2>System Status</h2>
+                <div id="status">Loading models...</div>
+                <button id="startCamera" disabled>Start Camera</button>
+                <button id="exportData" disabled class="btn-success">Export All Data</button>
+            </div>
+            
+            <div class="panel">
+                <h2>Register New Student</h2>
+                <div class="form-row">
+                    <label for="studentName">Student Name:</label>
+                    <input type="text" id="studentName" placeholder="Enter student's full name">
+                </div>
+                <div class="form-row">
+                    <label for="rollNumber">Roll Number:</label>
+                    <input type="text" id="rollNumber" placeholder="Enter student's roll number">
+                </div>
+                <button id="captureBtn" disabled>Capture Face</button>
+                <h3>Registered Students</h3>
+                <div id="students-list">
+                    <p>No students registered yet</p>
+                </div>
+                <button id="clearRegistrations" class="btn-danger">Clear All Registrations</button>
+            </div>
+            
+            <div class="panel">
+                <h2>Attendance Management</h2>
+                
+                <div class="subject-selector">
+                    <h3>Select Subject</h3>
+                    <div id="subjects-list">
+                        <p>No subjects available. Add one below.</p>
+                    </div>
+                    <div class="subject-controls">
+                        <input type="text" id="newSubject" placeholder="Add new subject (e.g., Data Structures)">
+                        <button id="addSubject" class="btn-success">Add</button>
+                    </div>
+                </div>
+                
+                <button id="startAttendance" disabled>Start Attendance Mode</button>
+                <button id="stopAttendance" disabled>Stop Attendance Mode</button>
+                
+                <h3>Attendance Records</h3>
+                <div class="date-filter">
+                    <input type="date" id="attendanceDate" value="">
+                    <button id="filterBtn">Filter</button>
+                </div>
+                <div id="attendance-list">
+                    <p>No attendance records yet</p>
+                </div>
+                <div class="export-actions">
+                    <button id="downloadAttendance" disabled>Download Today's Attendance</button>
+                    <button id="clearAttendance" class="btn-danger">Clear Attendance Data</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    
+    <script>
+        // DOM Elements
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('overlay');
+        const startCameraBtn = document.getElementById('startCamera');
+        const captureBtn = document.getElementById('captureBtn');
+        const studentNameInput = document.getElementById('studentName');
+        const rollNumberInput = document.getElementById('rollNumber');
+        const studentsList = document.getElementById('students-list');
+        const attendanceList = document.getElementById('attendance-list');
+        const startAttendanceBtn = document.getElementById('startAttendance');
+        const stopAttendanceBtn = document.getElementById('stopAttendance');
+        const downloadAttendanceBtn = document.getElementById('downloadAttendance');
+        const clearRegistrationsBtn = document.getElementById('clearRegistrations');
+        const clearAttendanceBtn = document.getElementById('clearAttendance');
+        const exportDataBtn = document.getElementById('exportData');
+        const statusText = document.getElementById('status');
+        const newSubjectInput = document.getElementById('newSubject');
+        const addSubjectBtn = document.getElementById('addSubject');
+        const subjectsList = document.getElementById('subjects-list');
+        const attendanceDateInput = document.getElementById('attendanceDate');
+        const filterBtn = document.getElementById('filterBtn');
+        
+        // Variables
+        const MODEL_URL = './models';
+        let isCameraStarted = false;
+        let isAttendanceMode = false;
+        let labeledDescriptors = [];
+        let faceMatcher = null;
+        let detectionInterval = null;
+        let attendanceRecords = [];
+        let subjects = ['DSA', 'AIML', 'Python']; // Default subjects
+        let currentSubject = subjects[0]; // Default to first subject
+        
+        // CSV File Names
+        const STUDENTS_CSV = 'students_data.csv';
+        const ATTENDANCE_CSV = 'attendance_data.csv';
+        const SUBJECTS_CSV = 'subjects_data.csv';
+        
+        // Initialize face-api.js
+        async function initFaceApi() {
+            try {
+                updateStatus('Loading face recognition models...', 'normal');
+                
+                // Load required models for face detection and recognition
+                await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
+                await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+                await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+                
+                updateStatus('Models loaded successfully!', 'success');
+                startCameraBtn.disabled = false;
+                
+                // Set today's date as default for date filter
+                const today = new Date().toISOString().split('T')[0];
+                attendanceDateInput.value = today;
+                
+                // Load data from CSV files
+                await loadDataFromCSV();
+            } catch (error) {
+                updateStatus(`Error loading models: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+        
+        // Update status with appropriate styling
+        function updateStatus(message, type = 'normal') {
+            statusText.textContent = message;
+            statusText.className = type;
+        }
+        
+        // Start webcam
+        async function startCamera() {
+            try {
+                updateStatus('Accessing camera...', 'normal');
+                const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
+                video.srcObject = stream;
+                
+                video.onplay = () => {
+                    canvas.style.display = 'block';
+                    const displaySize = { 
+                        width: video.videoWidth || video.width || 640, 
+                        height: video.videoHeight || video.height || 480 
+                    };
+                    faceapi.matchDimensions(canvas, displaySize);
+                    
+                    updateStatus('Camera started successfully!', 'success');
+                    captureBtn.disabled = false;
+                    startAttendanceBtn.disabled = labeledDescriptors.length === 0;
+                    isCameraStarted = true;
+                    startCameraBtn.disabled = true;
+                };
+            } catch (error) {
+                updateStatus(`Error accessing camera: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+        
+        // Load data from CSV files
+        async function loadDataFromCSV() {
+            try {
+                // Check if the browser supports the File System Access API
+                if ('showSaveFilePicker' in window) {
+                    updateStatus('Loading data from CSV files...', 'normal');
+                    
+                    // Load students data
+                    try {
+                        const studentsData = await readCSVFile(STUDENTS_CSV);
+                        if (studentsData && studentsData.length > 0) {
+                            processStudentsData(studentsData);
+                        }
+                    } catch (error) {
+                        console.warn('No existing students data file found, will create one when registering students.');
+                    }
+                    
+                    // Load attendance records
+                    try {
+                        const attendanceData = await readCSVFile(ATTENDANCE_CSV);
+                        if (attendanceData && attendanceData.length > 0) {
+                            processAttendanceData(attendanceData);
+                        }
+                    } catch (error) {
+                        console.warn('No existing attendance data file found, will create one when recording attendance.');
+                    }
+                    
+                    // Load subjects
+                    try {
+                        const subjectsData = await readCSVFile(SUBJECTS_CSV);
+                        if (subjectsData && subjectsData.length > 0) {
+                            subjects = subjectsData.map(row => row.subject);
+                            currentSubject = subjects[0];
+                        }
+                    } catch (error) {
+                        console.warn('No existing subjects file found, using default subjects.');
+                        // Create subjects file with defaults
+                        saveSubjectsToCSV();
+                    }
+                    
+                    updateSubjectsList();
+                    updateStatus('Data loaded successfully!', 'success');
+                    exportDataBtn.disabled = false;
+                } else {
+                    updateStatus('Your browser does not support direct file access. Some features may be limited.', 'error');
+                    
+                    // Fall back to localStorage if file access isn't available
+                    const savedStudents = localStorage.getItem('face_students');
+                    if (savedStudents) {
+                        const studentsData = JSON.parse(savedStudents);
+                        processStudentsData(studentsData);
+                    }
+                    
+                    const savedAttendance = localStorage.getItem('face_attendance');
+                    if (savedAttendance) {
+                        attendanceRecords = JSON.parse(savedAttendance);
+                        updateAttendanceList();
+                    }
+                    
+                    const savedSubjects = localStorage.getItem('face_subjects');
+                    if (savedSubjects) {
+                        subjects = JSON.parse(savedSubjects);
+                        currentSubject = subjects[0];
+                    }
+                    
+                    updateSubjectsList();
+                }
+            } catch (error) {
+                updateStatus(`Error loading data: ${error.message}`, 'error');
+                console.error('Error in loadDataFromCSV:', error);
+            }
+        }
+        
+        // Read CSV file
+        async function readCSVFile(filename) {
+            try {
+                // Use the Fetch API to read the file
+                const response = await fetch(filename);
+                if (!response.ok) {
+                    throw new Error(`File not found: ${filename}`);
+                }
+                
+                const csvText = await response.text();
+                
+                // Parse CSV data
+                return new Promise((resolve) => {
+                    Papa.parse(csvText, {
+                        header: true,
+                        dynamicTyping: true,
+                        complete: (results) => {
+                            resolve(results.data.filter(row => Object.keys(row).length > 1));
+                        }
+                    });
+                });
+            } catch (error) {
+                console.error(`Error reading ${filename}:`, error);
+                throw error;
+            }
+        }
+        
+        // Process students data from CSV
+        function processStudentsData(studentsData) {
+            labeledDescriptors = [];
+            
+            studentsData.forEach(student => {
+                if (student.name && student.roll && student.descriptors) {
+                    try {
+                        // Convert descriptor string back to Float32Array
+                        const descriptorValues = JSON.parse(student.descriptors);
+                        const descriptor = new Float32Array(descriptorValues);
+                        
+                        labeledDescriptors.push(
+                            new faceapi.LabeledFaceDescriptors(`${student.name}|${student.roll}`, [descriptor])
+                        );
+                    } catch (error) {
+                        console.error(`Error processing student data for ${student.name}:`, error);
+                    }
+                }
+            });
+            
+            if (labeledDescriptors.length > 0) {
+                faceMatcher = new faceapi.FaceMatcher(labeledDescriptors);
+                startAttendanceBtn.disabled = !isCameraStarted;
+                downloadAttendanceBtn.disabled = false;
+            }
+            
+            updateStudentsList();
+        }
+        
+        // Process attendance data from CSV
+        function processAttendanceData(attendanceData) {
+            attendanceRecords = attendanceData.map(record => ({
+                name: record.name,
+                roll: record.roll,
+                date: record.date,
+                time: record.time,
+                subject: record.subject
+            }));
+            
+            updateAttendanceList();
+            
+            if (attendanceRecords.length > 0) {
+                downloadAttendanceBtn.disabled = false;
+            }
+        }
+        
+        // Save students data to CSV
+        async function saveStudentsToCSV() {
+            try {
+                const studentsData = labeledDescriptors.map(descriptor => {
+                    const [name, roll] = descriptor.label.split('|');
+                    return {
+                        name,
+                        roll,
+                        descriptors: JSON.stringify(Array.from(descriptor.descriptors[0]))
+                    };
+                });
+                
+                await saveCSVFile(STUDENTS_CSV, studentsData);
+                updateStatus('Students data saved to CSV file', 'success');
+                
+                // Fallback storage
+                localStorage.setItem('face_students', JSON.stringify(studentsData));
+            } catch (error) {
+                updateStatus(`Error saving students data: ${error.message}`, 'error');
+                console.error('Error in saveStudentsToCSV:', error);
+            }
+        }
+        
+        // Save attendance records to CSV
+        async function saveAttendanceToCSV() {
+            try {
+                await saveCSVFile(ATTENDANCE_CSV, attendanceRecords);
+                updateStatus('Attendance data saved to CSV file', 'success');
+                
+                // Fallback storage
+                localStorage.setItem('face_attendance', JSON.stringify(attendanceRecords));
+            } catch (error) {
+                updateStatus(`Error saving attendance data: ${error.message}`, 'error');
+                console.error('Error in saveAttendanceToCSV:', error);
+            }
+        }
+        
+        // Save subjects to CSV
+        async function saveSubjectsToCSV() {
+            try {
+                const subjectsData = subjects.map(subject => ({ subject }));
+                await saveCSVFile(SUBJECTS_CSV, subjectsData);
+                
+                // Fallback storage
+                localStorage.setItem('face_subjects', JSON.stringify(subjects));
+            } catch (error) {
+                console.error('Error in saveSubjectsToCSV:', error);
+            }
+        }
+        
+        // Save data to CSV file
+        async function saveCSVFile(filename, data) {
+            // Create CSV content
+            const csv = Papa.unparse(data);
+            
+            try {
+                // Try to use the File System Access API
+                if ('showSaveFilePicker' in window) {
+                    const fileHandle = await window.showSaveFilePicker({
+                        suggestedName: filename,
+                        types: [{
+                            description: 'CSV File',
+                            accept: {'text/csv': ['.csv']},
+                        }],
+                    });
+                    
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(csv);
+                    await writable.close();
+                } else {
+                    // Fallback to download method
+                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }
+            } catch (error) {
+                console.error(`Error saving ${filename}:`, error);
+                throw error;
+            }
+        }
+        
+        // Capture a face for registration
+        async function captureFace() {
+            if (!isCameraStarted) {
+                updateStatus('Please start the camera first', 'error');
+                return;
+            }
+            
+            const name = studentNameInput.value.trim();
+            const roll = rollNumberInput.value.trim();
+            
+            if (!name) {
+                updateStatus('Please enter a student name', 'error');
+                return;
+            }
+            
+            if (!roll) {
+                updateStatus('Please enter a roll number', 'error');
+                return;
+            }
+            
+            try {
+                updateStatus('Capturing face, please look at the camera...', 'normal');
+                
+                // Detect all faces in the current frame
+                const detections = await faceapi
+                    .detectAllFaces(video, new faceapi.SsdMobilenetv1Options())
+                    .withFaceLandmarks()
+                    .withFaceDescriptors();
+                
+                if (detections.length === 0) {
+                    updateStatus('No face detected. Please make sure your face is visible.', 'error');
+                    return;
+                }
+                
+                if (detections.length > 1) {
+                    updateStatus('Multiple faces detected. Please make sure only one face is visible.', 'error');
+                    return;
+                }
+                
+                // Get face descriptor
+                const descriptor = detections[0].descriptor;
+                const label = `${name}|${roll}`;
+                
+                // Check if student with the same roll number exists
+                const existingPersonIndex = labeledDescriptors.findIndex(item => {
+                    const [, existingRoll] = item.label.split('|');
+                    return existingRoll === roll;
+                });
+                
+                if (existingPersonIndex !== -1) {
+                    // Update existing student
+                    labeledDescriptors[existingPersonIndex].descriptors[0] = descriptor;
+                    updateStatus(`Updated face data for Roll No. ${roll}`, 'success');
+                } else {
+                    // Add new student
+                    labeledDescriptors.push(
+                        new faceapi.LabeledFaceDescriptors(label, [descriptor])
+                    );
+                    updateStatus(`Registered new student: ${name} (${roll})`, 'success');
+                }
+                
+                // Update the face matcher
+                faceMatcher = new faceapi.FaceMatcher(labeledDescriptors);
+                
+                // Update the UI list
+                updateStudentsList();
+                
+                // Enable attendance button if we have registered people
+                startAttendanceBtn.disabled = false;
+                downloadAttendanceBtn.disabled = false;
+                exportDataBtn.disabled = false;
+                
+                // Clear form fields
+                studentNameInput.value = '';
+                rollNumberInput.value = '';
+                
+                // Save to CSV
+                await saveStudentsToCSV();
+            } catch (error) {
+                updateStatus(`Error capturing face: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+        
+        // Update the list of registered students
+        function updateStudentsList() {
+            if (labeledDescriptors.length === 0) {
+                studentsList.innerHTML = '<p>No students registered yet</p>';
+                return;
+            }
+            
+            let html = '';
+            labeledDescriptors.forEach(descriptor => {
+                const [name, roll] = descriptor.label.split('|');
+                html += `
+                <div class="student-item">
+                    <div class="student-info">
+                        <span class="student-name">${name}</span>
+                        <span class="student-roll">Roll: ${roll}</span>
+                    </div>
+                    <button onclick="removeStudent('${roll}')">Remove</button>
+                </div>`;
+            });
+            studentsList.innerHTML = html;
+        }
+        
+        // Remove a registered student
+        window.removeStudent = function(roll) {
+            labeledDescriptors = labeledDescriptors.filter(descriptor => {
+                const [, studentRoll] = descriptor.label.split('|');
+                return studentRoll !== roll;
+            });
+            
+            if (labeledDescriptors.length > 0) {
+                faceMatcher = new faceapi.FaceMatcher(labeledDescriptors);
+            } else {
+                faceMatcher = null;
+                startAttendanceBtn.disabled = true;
+            }
+            
+            // Update UI
+            updateStudentsList();
+            updateStatus(`Removed student with Roll No. ${roll} from the registry`, 'normal');
+            
+            // Save to CSV
+            saveStudentsToCSV();
+        };
+        
+        // Clear all registered students
+        function clearRegistrations() {
+            if (confirm("Are you sure you want to clear all registered students? This cannot be undone.")) {
+                labeledDescriptors = [];
+                faceMatcher = null;
+                startAttendanceBtn.disabled = true;
+                
+                // Update UI
+                updateStudentsList();
+                updateStatus('All student registrations cleared', 'normal');
+                
+                // Save to CSV (effectively clearing it)
+                saveStudentsToCSV();
+            }
+        }
+        
+        // Clear all attendance records
+        function clearAttendanceRecords() {
+            if (confirm("Are you sure you want to clear all attendance records? This cannot be undone.")) {
+                attendanceRecords = [];
+                downloadAttendanceBtn.disabled = true;
+                
+                // Update UI
+                updateAttendanceList();
+                updateStatus('All attendance records cleared', 'normal');
+                
+                // Save to CSV (effectively clearing it)
+                saveAttendanceToCSV();
+            }
+        }
+        
+        // Start attendance mode
+        function startAttendance() {
+            if (!isCameraStarted) {
+                updateStatus('Please start the camera first', 'error');
+                return;
+            }
+            
+            if (labeledDescriptors.length === 0) {
+                updateStatus('Please register at least one student first', 'error');
+                return;
+            }
+            
+            if (!currentSubject) {
+                updateStatus('Please select or add a subject first', 'error');
+                return;
+            }
+            
+            isAttendanceMode = true;
+            startAttendanceBtn.disabled = true;
+            stopAttendanceBtn.disabled = false;
+            captureBtn.disabled = true;
+            
+            updateStatus(`Attendance mode started for ${currentSubject}. Looking for registered faces...`, 'normal');
+            
+            // Start detection interval
+            detectionInterval = setInterval(detectFaces, 1000);
+        }
+        
+        // Stop attendance mode
+        function stopAttendance() {
+            isAttendanceMode = false;
+            clearInterval(detectionInterval);
+            startAttendanceBtn.disabled = false;
+            stopAttendanceBtn.disabled = true;
+            captureBtn.disabled = false;
+            
+            // Clear the canvas
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            updateStatus('Attendance mode stopped', 'normal');
+        }
+        
+        // Detect faces for attendance
+        async function detectFaces() {
+            if (!isAttendanceMode || !faceMatcher) return;
+            
+            try {
+                const detections = await faceapi
+                    .detectAllFaces(video, new faceapi.SsdMobilenetv1Options())
+                    .withFaceLandmarks()
+                    .withFaceDescriptors();
+                
+                // Resize detections to match display size
+                const displaySize = { 
+                    width: video.videoWidth || video.width || 640, 
+                    height: video.videoHeight || video.height || 480 
+                };
+                const resizedDetections = faceapi.resizeResults(detections, displaySize);
+                
+                // Clear canvas
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Match each face and draw results
+                resizedDetections.forEach(detection => {
+                    const match = faceMatcher.findBestMatch(detection.descriptor);
+                    const box = detection.detection.box;
+                    
+                    let labelText = match.label;
+                    let boxColor = '#e74c3c'; // Default red for unknown
+                    
+                    if (labelText !== 'unknown') {
+                        const [name, roll] = labelText.split('|');
+                        labelText = `${name} (${roll})`;
+                        boxColor = '#3498db'; // Blue for known faces
+                        
+                        // Record attendance
+                        recordAttendance(name, roll);
+                    }
+                    
+                    // Draw face box
+                    const drawBox = new faceapi.draw.DrawBox(box, { 
+                        label: labelText,
+                        boxColor: boxColor
+                    });
+                    drawBox.draw(canvas);
+                });
+            } catch (error) {
+                console.error('Error in face detection:', error);
+            }
+        }
+        
+        // Record attendance
+        function recordAttendance(name, roll) {
+            const now = new Date();
+            
+            // Format date as YYYY-MM-DD for consistent sorting and filename safety
+            const dateStr = now.toISOString().split('T')[0];
+            
+      // Format time as HH:MM:SS (24-hour format)
+      const timeStr = now.toTimeString().split(' ')[0];
+            
+            // Check if student already marked attendance for this subject today
+            const existingRecord = attendanceRecords.find(
+                record => record.roll === roll && 
+                         record.date === dateStr && 
+                         record.subject === currentSubject
+            );
+            
+            if (!existingRecord) {
+                attendanceRecords.push({
+                    name,
+                    roll,
+                    date: dateStr,
+                    time: timeStr,
+                    subject: currentSubject
+                });
+                
+                updateStatus(`Attendance marked for ${name} (${roll}) in ${currentSubject}`, 'success');
+                updateAttendanceList();
+                downloadAttendanceBtn.disabled = false;
+                
+                // Save to CSV
+                saveAttendanceToCSV();
+            }
+        }
+        
+        // Update attendance list based on selected date
+        function updateAttendanceList() {
+            if (attendanceRecords.length === 0) {
+                attendanceList.innerHTML = '<p>No attendance records yet</p>';
+                return;
+            }
+            
+            // Get selected date for filtering
+            const selectedDate = attendanceDateInput.value;
+            
+            // Filter records by date
+            const filteredRecords = attendanceRecords.filter(record => {
+                return selectedDate ? record.date === selectedDate : true;
+            });
+            
+            if (filteredRecords.length === 0) {
+                attendanceList.innerHTML = '<p>No attendance records for the selected date</p>';
+                return;
+            }
+            
+            // Group records by subject
+            const recordsBySubject = {};
+            filteredRecords.forEach(record => {
+                if (!recordsBySubject[record.subject]) {
+                    recordsBySubject[record.subject] = [];
+                }
+                recordsBySubject[record.subject].push(record);
+            });
+            
+            // Build HTML for attendance list
+            let html = '';
+            
+            // For each subject
+            Object.keys(recordsBySubject).sort().forEach(subject => {
+                html += `<h4>${subject} - ${selectedDate}</h4>`;
+                
+                // Sort records by name for this subject
+                const sortedRecords = recordsBySubject[subject].sort((a, b) => 
+                    a.name.localeCompare(b.name) || a.roll.localeCompare(b.roll)
+                );
+                
+                sortedRecords.forEach(record => {
+                    html += `
+                    <div class="attendance-item">
+                        <strong>${record.name}</strong> (${record.roll}) - ${record.time}
+                    </div>`;
+                });
+            });
+            
+            attendanceList.innerHTML = html;
+        }
+        
+        // Download attendance as CSV
+        function downloadAttendance() {
+            // Get selected date
+            const selectedDate = attendanceDateInput.value;
+            
+            if (!selectedDate) {
+                updateStatus('Please select a date for attendance download', 'error');
+                return;
+            }
+            
+            // Filter records by date
+            const filteredRecords = attendanceRecords.filter(record => record.date === selectedDate);
+            
+            if (filteredRecords.length === 0) {
+                updateStatus('No attendance records for the selected date', 'error');
+                return;
+            }
+            
+            // Create CSV content
+            let csvContent = "Name,Roll Number,Subject,Date,Time\n";
+            filteredRecords.forEach(record => {
+                csvContent += `"${record.name}","${record.roll}","${record.subject}",${record.date},${record.time}\n`;
+            });
+            
+            // Create download link
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.download = `attendance_${selectedDate}.csv`;
+            a.href = url;
+            a.style.display = 'none';
+            
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            updateStatus('Attendance downloaded successfully!', 'success');
+        }
+        
+        // Export all data
+        function exportAllData() {
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            
+            // Export students data
+            if (labeledDescriptors.length > 0) {
+                const studentsData = labeledDescriptors.map(descriptor => {
+                    const [name, roll] = descriptor.label.split('|');
+                    return {
+                        name,
+                        roll,
+                        descriptors: JSON.stringify(Array.from(descriptor.descriptors[0]))
+                    };
+                });
+                
+                const studentsCSV = Papa.unparse(studentsData);
+                downloadCSV(studentsCSV, `students_export_${timestamp}.csv`);
+            }
+            
+            // Export attendance data
+            if (attendanceRecords.length > 0) {
+                const attendanceCSV = Papa.unparse(attendanceRecords);
+                downloadCSV(attendanceCSV, `attendance_export_${timestamp}.csv`);
+            }
+            
+            // Export subjects
+            const subjectsData = subjects.map(subject => ({ subject }));
+            const subjectsCSV = Papa.unparse(subjectsData);
+            downloadCSV(subjectsCSV, `subjects_export_${timestamp}.csv`);
+            
+            updateStatus('All data exported successfully!', 'success');
+        }
+        
+        // Helper function to download CSV
+        function downloadCSV(csvContent, filename) {
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.download = filename;
+            a.href = url;
+            a.style.display = 'none';
+            
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        
+        // Update the list of subjects
+        function updateSubjectsList() {
+            if (subjects.length === 0) {
+                subjectsList.innerHTML = '<p>No subjects available. Add one below.</p>';
+                return;
+            }
+            
+            let html = '';
+            subjects.forEach((subject, index) => {
+                const isChecked = subject === currentSubject ? 'checked' : '';
+                html += `
+                <div class="subject-item">
+                    <input type="radio" name="subject" id="subject-${index}" value="${subject}" ${isChecked}>
+                    <label for="subject-${index}">${subject}</label>
+                </div>`;
+            });
+            subjectsList.innerHTML = html;
+            
+            // Add event listeners to radio buttons
+            document.querySelectorAll('input[name="subject"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    currentSubject = this.value;
+                    updateStatus(`Selected subject: ${currentSubject}`, 'normal');
+                });
+            });
+        }
+        
+        // Add a new subject
+        function addNewSubject() {
+            const newSubject = newSubjectInput.value.trim();
+            
+            if (!newSubject) {
+                updateStatus('Please enter a subject name', 'error');
+                return;
+            }
+            
+            if (subjects.includes(newSubject)) {
+                updateStatus('This subject already exists', 'error');
+                return;
+            }
+            
+            subjects.push(newSubject);
+            currentSubject = newSubject;
+            
+            // Update UI
+            updateSubjectsList();
+            newSubjectInput.value = '';
+            updateStatus(`Added new subject: ${newSubject}`, 'success');
+            
+            // Save to CSV
+            saveSubjectsToCSV();
+        }
+        
+        // Filter attendance by date
+        function filterAttendanceByDate() {
+            updateAttendanceList();
+        }
+        
+        // Fallback method for browsers without File System Access API
+        function fallbackSaveToLocalStorage() {
+            // Save students data
+            if (labeledDescriptors.length > 0) {
+                const studentsData = labeledDescriptors.map(descriptor => {
+                    const [name, roll] = descriptor.label.split('|');
+                    return {
+                        name,
+                        roll,
+                        descriptors: JSON.stringify(Array.from(descriptor.descriptors[0]))
+                    };
+                });
+                localStorage.setItem('face_students', JSON.stringify(studentsData));
+            } else {
+                localStorage.removeItem('face_students');
+            }
+            
+            // Save attendance data
+            if (attendanceRecords.length > 0) {
+                localStorage.setItem('face_attendance', JSON.stringify(attendanceRecords));
+            } else {
+                localStorage.removeItem('face_attendance');
+            }
+            
+            // Save subjects
+            localStorage.setItem('face_subjects', JSON.stringify(subjects));
+            
+            updateStatus('Data saved to browser storage', 'success');
+        }
+        
+        // Event listeners
+        startCameraBtn.addEventListener('click', startCamera);
+        captureBtn.addEventListener('click', captureFace);
+        startAttendanceBtn.addEventListener('click', startAttendance);
+        stopAttendanceBtn.addEventListener('click', stopAttendance);
+        downloadAttendanceBtn.addEventListener('click', downloadAttendance);
+        clearRegistrationsBtn.addEventListener('click', clearRegistrations);
+        clearAttendanceBtn.addEventListener('click', clearAttendanceRecords);
+        exportDataBtn.addEventListener('click', exportAllData);
+        addSubjectBtn.addEventListener('click', addNewSubject);
+        filterBtn.addEventListener('click', filterAttendanceByDate);
+        
+        // Handle window unload to save data as fallback
+        window.addEventListener('beforeunload', function() {
+            if (!('showSaveFilePicker' in window)) {
+                fallbackSaveToLocalStorage();
+            }
+        });
+        
+        // Initialize app
+        initFaceApi();
+    </script>
+</body>
+</html>  -->
+
+
+
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Recognition Attendance System</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .video-container {
+            position: relative;
+            width: 640px;
+        }
+
+        video, canvas {
+            width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .panel {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            margin-top: 0;
+            color: #2c3e50;
+            font-size: 1.2rem;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin: 5px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        #status {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        #descriptors-list, #attendance-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 10px;
+        }
+
+        .person-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .attendance-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .success {
+            color: #27ae60;
+        }
+        
+        .error {
+            color: #e74c3c;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .storage-panel {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .storage-panel button {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <h1>Face Recognition Attendance System</h1>
+    
+    <div class="container">
+        <div class="video-container">
+            <video id="video" autoplay muted></video>
+        </div>
+        
+        <div class="controls">
+            <div class="panel">
+                <h2>Status</h2>
+                <div id="status">Loading models...</div>
+                <button id="startCamera" disabled>Start Camera</button>
+            </div>
+            
+            <div class="panel">
+                <h2>Register New Person</h2>
+                <input type="text" id="personName" placeholder="Enter person's name">
+                <button id="captureBtn" disabled>Capture Face</button>
+                <div id="descriptors-list">
+                    <p>No people registered yet</p>
+                </div>
+                <div class="storage-panel">
+                    <button id="clearRegistrations">Clear All Registrations</button>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h2>Attendance</h2>
+                <button id="startAttendance" disabled>Start Attendance Mode</button>
+                <button id="stopAttendance" disabled>Stop Attendance Mode</button>
+                <div id="attendance-list">
+                    <p>No attendance records yet</p>
+                </div>
+                <button id="downloadAttendance" disabled>Download Attendance</button>
+                <div class="storage-panel">
+                    <button id="clearAttendance">Clear Attendance Data</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    
+    <script>
+        // DOM Elements
+        const video = document.getElementById('video');
+        const startCameraBtn = document.getElementById('startCamera');
+        const captureBtn = document.getElementById('captureBtn');
+        const personNameInput = document.getElementById('personName');
+        const descriptorsList = document.getElementById('descriptors-list');
+        const attendanceList = document.getElementById('attendance-list');
+        const startAttendanceBtn = document.getElementById('startAttendance');
+        const stopAttendanceBtn = document.getElementById('stopAttendance');
+        const downloadAttendanceBtn = document.getElementById('downloadAttendance');
+        const clearRegistrationsBtn = document.getElementById('clearRegistrations');
+        const clearAttendanceBtn = document.getElementById('clearAttendance');
+        const statusText = document.getElementById('status');
+        
+        // Variables
+        const MODEL_URL = './models';
+        let isCameraStarted = false;
+        let isAttendanceMode = false;
+        let canvas = null;
+        let labeledDescriptors = [];
+        let faceMatcher = null;
+        let detectionInterval = null;
+        let attendanceRecords = [];
+
+        // LocalStorage keys
+        const DESCRIPTORS_KEY = 'face_recognition_descriptors';
+        const ATTENDANCE_KEY = 'face_recognition_attendance';
+
+        // Initialize face-api.js
+        async function initFaceApi() {
+            try {
+                updateStatus('Loading face recognition models...', 'normal');
+                
+                // Load required models for face detection and recognition
+                await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
+                await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+                await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+                
+                updateStatus('Models loaded successfully!', 'success');
+                startCameraBtn.disabled = false;
+                
+                // Load data from localStorage
+                loadFromLocalStorage();
+            } catch (error) {
+                updateStatus(`Error loading models: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+        
+        // Update status with appropriate styling
+        function updateStatus(message, type = 'normal') {
+            statusText.textContent = message;
+            statusText.className = type;
+        }
+        
+        // Start webcam
+        async function startCamera() {
+            try {
+                updateStatus('Accessing camera...', 'normal');
+                const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
+                video.srcObject = stream;
+                
+                video.onplay = () => {
+                    if (!canvas) {
+                        canvas = faceapi.createCanvasFromMedia(video);
+                        document.querySelector('.video-container').appendChild(canvas);
+                        const displaySize = { 
+                            width: video.videoWidth || video.width || 640, 
+                            height: video.videoHeight || video.height || 480 
+                        };
+                        faceapi.matchDimensions(canvas, displaySize);
+                    }
+                    
+                    updateStatus('Camera started successfully!', 'success');
+                    captureBtn.disabled = false;
+                    startAttendanceBtn.disabled = labeledDescriptors.length === 0;
+                    isCameraStarted = true;
+                    startCameraBtn.disabled = true;
+                };
+            } catch (error) {
+                updateStatus(`Error accessing camera: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+        
+        // Load data from localStorage
+        function loadFromLocalStorage() {
+            try {
+                // Load face descriptors
+                const savedDescriptorsJson = localStorage.getItem(DESCRIPTORS_KEY);
+                if (savedDescriptorsJson) {
+                    const savedDescriptorsData = JSON.parse(savedDescriptorsJson);
+                    
+                    // Convert loaded data back to LabeledFaceDescriptors objects
+                    labeledDescriptors = savedDescriptorsData.map(item => {
+                        // Convert descriptors back to Float32Array
+                        const descriptors = item.descriptors.map(desc => {
+                            return new Float32Array(Object.values(desc));
+                        });
+                        
+                        return new faceapi.LabeledFaceDescriptors(item.label, descriptors);
+                    });
+                    
+                    // Create face matcher if we have descriptors
+                    if (labeledDescriptors.length > 0) {
+                        faceMatcher = new faceapi.FaceMatcher(labeledDescriptors);
+                        downloadAttendanceBtn.disabled = false;
+                        updateStatus('Loaded face data from local storage', 'success');
+                    }
+                    
+                    // Update UI
+                    updateDescriptorsList();
+                }
+                
+                // Load attendance records
+                const savedAttendanceJson = localStorage.getItem(ATTENDANCE_KEY);
+                if (savedAttendanceJson) {
+                    attendanceRecords = JSON.parse(savedAttendanceJson);
+                    updateAttendanceList();
+                    
+                    if (attendanceRecords.length > 0) {
+                        downloadAttendanceBtn.disabled = false;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading data from localStorage:', error);
+                updateStatus('Error loading saved data', 'error');
+            }
+        }
+        
+        // Save face descriptors to localStorage
+        function saveDescriptorsToLocalStorage() {
+            try {
+                localStorage.setItem(DESCRIPTORS_KEY, JSON.stringify(labeledDescriptors));
+            } catch (error) {
+                console.error('Error saving descriptors to localStorage:', error);
+                updateStatus('Error saving face data to local storage', 'error');
+            }
+        }
+        
+        // Save attendance records to localStorage
+        function saveAttendanceToLocalStorage() {
+            try {
+                localStorage.setItem(ATTENDANCE_KEY, JSON.stringify(attendanceRecords));
+            } catch (error) {
+                console.error('Error saving attendance to localStorage:', error);
+                updateStatus('Error saving attendance data to local storage', 'error');
+            }
+        }
+        
+        // Capture a face for registration
+        async function captureFace() {
+            if (!isCameraStarted) {
+                updateStatus('Please start the camera first', 'error');
+                return;
+            }
+            
+            const name = personNameInput.value.trim();
+            if (!name) {
+                updateStatus('Please enter a name', 'error');
+                return;
+            }
+            
+            try {
+                updateStatus('Capturing face, please look at the camera...', 'normal');
+                
+                // Detect all faces in the current frame
+                const detections = await faceapi
+                    .detectAllFaces(video, new faceapi.SsdMobilenetv1Options())
+                    .withFaceLandmarks()
+                    .withFaceDescriptors();
+                
+                if (detections.length === 0) {
+                    updateStatus('No face detected. Please make sure your face is visible.', 'error');
+                    return;
+                }
+                
+                if (detections.length > 1) {
+                    updateStatus('Multiple faces detected. Please make sure only one face is visible.', 'error');
+                    return;
+                }
+                
+                // Get face descriptor
+                const descriptor = detections[0].descriptor;
+                
+                // Check if person with the same name exists
+                const existingPersonIndex = labeledDescriptors.findIndex(item => item.label === name);
+                
+                if (existingPersonIndex !== -1) {
+                    // Update existing person
+                    labeledDescriptors[existingPersonIndex].descriptors[0] = descriptor;
+                    updateStatus(`Updated face data for ${name}`, 'success');
+                } else {
+                    // Add new person
+                    labeledDescriptors.push(
+                        new faceapi.LabeledFaceDescriptors(name, [descriptor])
+                    );
+                    updateStatus(`Registered new person: ${name}`, 'success');
+                }
+                
+                // Update the face matcher
+                faceMatcher = new faceapi.FaceMatcher(labeledDescriptors);
+                
+                // Update the UI list
+                updateDescriptorsList();
+                
+                // Enable attendance button if we have registered people
+                startAttendanceBtn.disabled = false;
+                downloadAttendanceBtn.disabled = false;
+                
+                personNameInput.value = '';
+                
+                // Save to localStorage
+                saveDescriptorsToLocalStorage();
+            } catch (error) {
+                updateStatus(`Error capturing face: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+        
+        // Update the list of registered people
+        function updateDescriptorsList() {
+            if (labeledDescriptors.length === 0) {
+                descriptorsList.innerHTML = '<p>No people registered yet</p>';
+                return;
+            }
+            
+            let html = '';
+            labeledDescriptors.forEach(descriptor => {
+                html += `
+                <div class="person-item">
+                    <span>${descriptor.label}</span>
+                    <button onclick="removePerson('${descriptor.label}')">Remove</button>
+                </div>`;
+            });
+            descriptorsList.innerHTML = html;
+        }
+        
+        // Remove a registered person
+        window.removePerson = function(name) {
+            labeledDescriptors = labeledDescriptors.filter(descriptor => descriptor.label !== name);
+            
+            if (labeledDescriptors.length > 0) {
+                faceMatcher = new faceapi.FaceMatcher(labeledDescriptors);
+            } else {
+                faceMatcher = null;
+                startAttendanceBtn.disabled = true;
+            }
+            
+            // Update UI
+            updateDescriptorsList();
+            updateStatus(`Removed ${name} from the registry`, 'normal');
+            
+            // Save to localStorage
+            saveDescriptorsToLocalStorage();
+        };
+        
+        // Clear all registered people
+        function clearRegistrations() {
+            if (confirm("Are you sure you want to clear all registered people? This cannot be undone.")) {
+                labeledDescriptors = [];
+                faceMatcher = null;
+                startAttendanceBtn.disabled = true;
+                
+                // Update UI
+                updateDescriptorsList();
+                updateStatus('All registrations cleared', 'normal');
+                
+                // Save to localStorage (effectively clearing it)
+                saveDescriptorsToLocalStorage();
+            }
+        }
+        
+        // Clear all attendance records
+        function clearAttendanceRecords() {
+            if (confirm("Are you sure you want to clear all attendance records? This cannot be undone.")) {
+                attendanceRecords = [];
+                downloadAttendanceBtn.disabled = true;
+                
+                // Update UI
+                updateAttendanceList();
+                updateStatus('All attendance records cleared', 'normal');
+                
+                // Save to localStorage (effectively clearing it)
+                saveAttendanceToLocalStorage();
+            }
+        }
+        
+        // Start attendance mode
+        function startAttendance() {
+            if (!isCameraStarted) {
+                updateStatus('Please start the camera first', 'error');
+                return;
+            }
+            
+            if (labeledDescriptors.length === 0) {
+                updateStatus('Please register at least one person first', 'error');
+                return;
+            }
+            
+            isAttendanceMode = true;
+            startAttendanceBtn.disabled = true;
+            stopAttendanceBtn.disabled = false;
+            captureBtn.disabled = true;
+            
+            updateStatus('Attendance mode started. Looking for registered faces...', 'normal');
+            
+            // Start detection interval
+            detectionInterval = setInterval(detectFaces, 1000);
+        }
+        
+        // Stop attendance mode
+        function stopAttendance() {
+            isAttendanceMode = false;
+            clearInterval(detectionInterval);
+            startAttendanceBtn.disabled = false;
+            stopAttendanceBtn.disabled = true;
+            captureBtn.disabled = false;
+            
+            // Clear the canvas
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            updateStatus('Attendance mode stopped', 'normal');
+        }
+        
+        // Detect faces for attendance
+        async function detectFaces() {
+            if (!isAttendanceMode || !faceMatcher) return;
+            
+            try {
+                const detections = await faceapi
+                    .detectAllFaces(video, new faceapi.SsdMobilenetv1Options())
+                    .withFaceLandmarks()
+                    .withFaceDescriptors();
+                
+                // Resize detections to match display size
+                const displaySize = { 
+                    width: video.videoWidth || video.width || 640, 
+                    height: video.videoHeight || video.height || 480 
+                };
+                const resizedDetections = faceapi.resizeResults(detections, displaySize);
+                
+                // Clear canvas
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Match each face and draw results
+                resizedDetections.forEach(detection => {
+                    const match = faceMatcher.findBestMatch(detection.descriptor);
+                    const box = detection.detection.box;
+                    
+                    // Draw face box
+                    const drawBox = new faceapi.draw.DrawBox(box, { 
+                        label: match.toString(),
+                        boxColor: match.label !== 'unknown' ? '#3498db' : '#e74c3c' 
+                    });
+                    drawBox.draw(canvas);
+                    
+                    // Record attendance if not unknown
+                    if (match.label !== 'unknown') {
+                        recordAttendance(match.label);
+                    }
+                });
+            } catch (error) {
+                console.error('Error in face detection:', error);
+            }
+        }
+        
+        // Record attendance
+        function recordAttendance(name) {
+            const now = new Date();
+            
+            // Format date as YYYY-MM-DD for consistent sorting and filename safety
+            const dateStr = now.toISOString().split('T')[0];
+            
+            // Format time as HH:MM:SS (24-hour format)
+            const timeStr = now.toTimeString().split(' ')[0];
+            
+            // Check if person already marked attendance today
+            const existingRecord = attendanceRecords.find(
+                record => record.name === name && record.date === dateStr
+            );
+            
+            if (!existingRecord) {
+                attendanceRecords.push({
+                    name,
+                    date: dateStr,
+                    time: timeStr
+                });
+                
+                updateStatus(`Attendance marked for ${name}`, 'success');
+                updateAttendanceList();
+                downloadAttendanceBtn.disabled = false;
+                
+                // Save to localStorage
+                saveAttendanceToLocalStorage();
+            }
+        }
+        
+        // Update attendance list
+        function updateAttendanceList() {
+            if (attendanceRecords.length === 0) {
+                attendanceList.innerHTML = '<p>No attendance records yet</p>';
+                return;
+            }
+            
+            // Sort by date (newest first) and then by name
+            const sortedRecords = [...attendanceRecords].sort((a, b) => {
+                // First sort by date (newest first)
+                if (a.date !== b.date) {
+                    return new Date(b.date) - new Date(a.date);
+                }
+                // Then by name (alphabetical)
+                return a.name.localeCompare(b.name);
+            });
+            
+            let html = '';
+            sortedRecords.forEach(record => {
+                // Display date in a more readable format (e.g., "Apr 14, 2025")
+                const displayDate = new Date(record.date).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                });
+                
+                html += `
+                <div class="attendance-item">
+                    <strong>${record.name}</strong> - ${displayDate} at ${record.time}
+                </div>`;
+            });
+            attendanceList.innerHTML = html;
+        }
+        
+        // Download attendance as CSV
+        function downloadAttendance() {
+            if (attendanceRecords.length === 0) {
+                updateStatus('No attendance records to download', 'error');
+                return;
+            }
+            
+            // Create CSV content with proper date formatting
+            let csvContent = "Name,Date,Time\n";
+            attendanceRecords.forEach(record => {
+                // Format as "Name,YYYY-MM-DD,HH:MM:SS" for Excel compatibility
+                csvContent += `"${record.name}",${record.date},${record.time}\n`;
+            });
+            
+            // Create download link
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            
+            // Get current date in YYYY-MM-DD format for filename
+            const today = new Date().toISOString().split('T')[0];
+            a.download = `attendance_${today}.csv`;
+            a.href = url;
+            a.style.display = 'none';
+            
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            updateStatus('Attendance downloaded successfully!', 'success');
+        }
+        
+        // Handle potential localStorage errors
+        window.addEventListener('error', function(event) {
+            if (event.message.includes('localStorage') || 
+                event.message.includes('quota') || 
+                event.message.includes('storage')) {
+                updateStatus('Storage error: You may be in private browsing mode or storage is full', 'error');
+            }
+        });
+        
+        // Event listeners
+        startCameraBtn.addEventListener('click', startCamera);
+        captureBtn.addEventListener('click', captureFace);
+        startAttendanceBtn.addEventListener('click', startAttendance);
+        stopAttendanceBtn.addEventListener('click', stopAttendance);
+        downloadAttendanceBtn.addEventListener('click', downloadAttendance);
+        clearRegistrationsBtn.addEventListener('click', clearRegistrations);
+        clearAttendanceBtn.addEventListener('click', clearAttendanceRecords);
+        
+        // Initialize app
+        initFaceApi();
+    </script>
+</body>
+</html> -->
